@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小程序过审自查助手 MVP</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f5f7fa; color: #333; max-width: 600px; margin: 40px auto; padding: 20px; }
+        .container { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #07c160; margin-bottom: 30px; }
+        .question-item { margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 8px; }
+        .question-title { font-weight: bold; margin-bottom: 10px; display: block; }
+        .options label { margin-right: 20px; cursor: pointer; }
+        button { display: block; width: 100%; padding: 15px; background-color: #07c160; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 20px; }
+        button:hover { background-color: #06ad56; }
+        #result { margin-top: 30px; display: none; padding: 20px; border-radius: 8px; background-color: #f0f9eb; border: 1px solid #c2e7b0; }
+        .score { font-size: 24px; font-weight: bold; color: #07c160; text-align: center; display: block; margin-bottom: 15px; }
+        .issue { color: #e64340; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚀 小程序过审自查助手</h1>
+    <div id="quiz-form">
+        <!-- 题目会通过JS动态生成 -->
+    </div>
+    <button onclick="generateReport()">生成诊断报告</button>
+
+    <div id="result">
+        <span class="score" id="score-display"></span>
+        <div id="issue-list"></div>
+    </div>
+</div>
+
+<script>
+    // 自查题库配置
+    const checklist = [
+        { module: "基础资质", question: "是否已完成工信部ICP备案？", weight: 100, fatal: true },
+        { module: "基础资质", question: "服务类目是否与实际功能完全对应？", weight: 30, fatal: false },
+        { module: "隐私合规", question: "是否已配置《用户隐私保护指引》？", weight: 100, fatal: true },
+        { module: "隐私合规", question: "首次打开是否有隐私弹窗且同意后才调用接口？", weight: 30, fatal: false },
+        { module: "功能体验", question: "核心功能是否完整跑通，无“正在开发中”页面？", weight: 50, fatal: true },
+        { module: "提交细节", question: "如需登录，是否提供了有效的测试账号密码？", weight: 100, fatal: true },
+        { module: "提交细节", question: "所有服务器域名是否已配置有效的HTTPS证书？", weight: 100, fatal: true }
+    ];
+
+    const formContainer = document.getElementById('quiz-form');
+
+    // 动态渲染题目
+    checklist.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'question-item';
+        div.innerHTML = `
+            <span class="question-title">【${item.module}】${item.question}</span>
+            <div class="options">
+                <label><input type="radio" name="q${index}" value="yes" checked> 是</label>
+                <label><input type="radio" name="q${index}" value="no"> 否</label>
+            </div>
+        `;
+        formContainer.appendChild(div);
+    });
+
+    function generateReport() {
+        let score = 100;
+        let issues = [];
+        
+        checklist.forEach((item, index) => {
+            const answer = document.querySelector(`input[name="q${index}"]:checked`).value;
+            if (answer === 'no') {
+                score -= item.weight;
+                const status = item.fatal ? "🛑 严重阻断" : "⚠️ 建议优化";
+                issues.push(`${status}：${item.question}`);
+            }
+        });
+
+        score = Math.max(0, score);
+        
+        const resultDiv = document.getElementById('result');
+        const scoreDisplay = document.getElementById('score-display');
+        const issueList = document.getElementById('issue-list');
+
+        resultDiv.style.display = 'block';
+        scoreDisplay.innerText = `预估过审评分：${score} / 100`;
+        
+        let evaluation = "";
+        if (score === 100) evaluation = "🌟 完美！你的小程序已准备好，祝一次过审！";
+        else if (score >= 60) evaluation = "🤔 存在一定风险，建议修复以下问题后再提交：";
+        else evaluation = "🛑 风险极高！存在阻断性问题，强行提交大概率会被驳回：";
+
+        issueList.innerHTML = `<p style="margin-bottom:10px; font-weight:bold;">${evaluation}</p>` + 
+            issues.map(issue => `<div class="issue">• ${issue}</div>`).join('');
+        
+        // 滚动到底部查看结果
+        resultDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+</script>
+
+</body>
+</html>
